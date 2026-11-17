@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import stats
 
+from hillstrom.paths import SEED
+
 
 @dataclass(frozen=True)
 class EffectResult:
@@ -69,3 +71,34 @@ def diff_means_welch(y_t: np.ndarray, y_c: np.ndarray, alpha: float = 0.05) -> E
         n_t=len(y_t),
         n_c=len(y_c),
     )
+
+
+def bootstrap_diff_ci(
+    y_t: np.ndarray,
+    y_c: np.ndarray,
+    n_boot: int = 10_000,
+    alpha: float = 0.05,
+    seed: int = SEED,
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for mean(y_t) - mean(y_c).
+
+    Each arm is resampled independently with replacement, as in the experiment the
+    arms are independent samples. No distributional assumption, which suits spend
+    (mostly zeros, long right tail).
+    """
+
+    def mean_diff(a, b, axis):
+        return a.mean(axis=axis) - b.mean(axis=axis)
+
+    result = stats.bootstrap(
+        (np.asarray(y_t, dtype=float), np.asarray(y_c, dtype=float)),
+        mean_diff,
+        n_resamples=n_boot,
+        confidence_level=1 - alpha,
+        method="percentile",
+        vectorized=True,
+        paired=False,
+        batch=500,
+        rng=np.random.default_rng(seed),
+    )
+    return float(result.confidence_interval.low), float(result.confidence_interval.high)
