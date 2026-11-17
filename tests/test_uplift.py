@@ -2,7 +2,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from hillstrom.uplift import TLearner, gain_over_random, make_features, split_train_test, uplift_curve
+from hillstrom.uplift import (
+    TLearner,
+    bootstrap_gain_over_random,
+    gain_over_random,
+    make_features,
+    split_train_test,
+    uplift_curve,
+)
 
 
 def _customers(n: int = 3000, seed: int = 0) -> pd.DataFrame:
@@ -123,3 +130,22 @@ def test_gain_over_random_sign_follows_ranking_quality():
     assert gain_over_random(y_bin, x, treated) > 0.02
     assert gain_over_random(y_bin, -x, treated) < -0.02
     assert abs(gain_over_random(y_bin, rng.normal(size=len(x)), treated)) < 0.01
+
+
+def test_bootstrap_gain_reproducible_and_paired():
+    X, treated, y_bin, _, x = _heterogeneous(n=4000)
+    a = bootstrap_gain_over_random(y_bin, x, treated, n_boot=50, seed=3)
+    b = bootstrap_gain_over_random(y_bin, x, treated, n_boot=50, seed=3)
+    assert np.array_equal(a, b)
+    # Same seed -> same resamples, so draws for two scores can be compared pairwise.
+    noisy = x + np.random.default_rng(0).normal(0, 0.5, len(x))
+    c = bootstrap_gain_over_random(y_bin, noisy, treated, n_boot=50, seed=3)
+    assert len(a) == len(c) == 50
+    assert np.mean(a - c) > 0
+
+
+def test_bootstrap_gain_interval_contains_point_estimate():
+    X, treated, y_bin, _, x = _heterogeneous(n=4000)
+    draws = bootstrap_gain_over_random(y_bin, x, treated, n_boot=200, seed=0)
+    low, high = np.percentile(draws, [2.5, 97.5])
+    assert low < gain_over_random(y_bin, x, treated) < high

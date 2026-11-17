@@ -126,3 +126,22 @@ def gain_over_random(y: np.ndarray, uplift: np.ndarray, treated: np.ndarray) -> 
     share, gain_per_customer = n_targeted / n, gain / n
     random_line = share * gain_per_customer[-1]
     return float(np.trapezoid(gain_per_customer - random_line, share))
+
+
+def bootstrap_gain_over_random(
+    y: np.ndarray, uplift: np.ndarray, treated: np.ndarray, n_boot: int = 500, seed: int = SEED
+) -> np.ndarray:
+    """Bootstrap draws of `gain_over_random`, resampling customers with predictions held fixed.
+
+    Captures sampling uncertainty of the evaluation set, not variation from re-training the
+    model. The same seed gives the same resamples, so draws for two different score vectors
+    are paired and their difference can be summarised directly.
+    """
+    y, uplift, treated = np.asarray(y), np.asarray(uplift), np.asarray(treated)
+    rng = np.random.default_rng(seed)
+    n = len(y)
+    draws = np.empty(n_boot)
+    for b in range(n_boot):
+        idx = rng.integers(0, n, n)
+        draws[b] = gain_over_random(y[idx], uplift[idx], treated[idx])
+    return draws
