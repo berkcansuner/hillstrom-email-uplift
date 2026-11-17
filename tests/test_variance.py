@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from hillstrom.variance import cuped_adjust
+from hillstrom.effects import diff_means_welch
+from hillstrom.variance import cuped_adjust, regression_adjusted_effect
 
 
 def _experiment(n: int = 20_000, rho_strength: float = 2.0, effect: float = 0.5, seed: int = 0):
@@ -43,3 +44,42 @@ def test_cuped_with_unrelated_covariate_changes_little():
     y_adj, theta = cuped_adjust(y, rng.normal(size=5000))
     assert abs(theta) < 0.05
     assert y_adj.var() == pytest.approx(y.var(), rel=0.01)
+
+
+# --- regression adjustment ---------------------------------------------------
+
+
+def _frame(seed: int = 0) -> pd.DataFrame:
+    x, y, treated = _experiment(seed=seed)
+    rng = np.random.default_rng(seed + 1)
+    return pd.DataFrame(
+        {
+            "arm": np.where(treated, "mens", "control"),
+            "y": y,
+            "x": x,
+            "channel": rng.choice(["Web", "Phone"], len(y)),
+        }
+    )
+
+
+def test_regression_without_covariates_equals_raw_difference():
+    df = _frame()
+    result = regression_adjusted_effect(df, "y", "mens", covariates=[])
+    welch = diff_means_welch(df.loc[df.arm == "mens", "y"], df.loc[df.arm == "control", "y"])
+    assert result.estimate == pytest.approx(welch.estimate)
+    assert result.ci_high - result.ci_low == pytest.approx(welch.ci_high - welch.ci_low, rel=0.01)
+
+
+def test_regression_with_predictive_covariate_narrows_ci_and_stays_unbiased():
+    df = _frame()
+    raw = regression_adjusted_effect(df, "y", "mens", covariates=[])
+    adjusted = regression_adjusted_effect(df, "y", "mens", covariates=["x"])
+    assert adjusted.estimate == pytest.approx(0.5, abs=0.1)
+    assert (adjusted.ci_high - adjusted.ci_low) < 0.8 * (raw.ci_high - raw.ci_low)
+
+
+def test_regression_accepts_categorical_covariates():
+    df = _frame()
+    result = regression_adjusted_effect(df, "y", "mens", covariates=["x", "channel"])
+    assert result.ci_low < 0.5 < result.ci_high
+    assert (result.n_t, result.n_c) == ((df.arm == "mens").sum(), (df.arm == "control").sum())
