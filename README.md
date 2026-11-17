@@ -100,7 +100,11 @@ pytest
 jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
 ```
 
-On macOS/Linux, activate with `source .venv/bin/activate`. All random steps (bootstrap, train/test split, models) use a fixed seed, so re-running reproduces the numbers above.
+On macOS/Linux, activate with `source .venv/bin/activate`.
+
+On Windows, clone the repository to a short path (under about 90 characters, e.g. `C:\Github\hillstrom-email-uplift`) or [enable long path support](https://pip.pypa.io/warnings/enable-long-paths). `jupyterlab`, pulled in by `notebook`, contains files with very long names, and its installation fails if the full path exceeds Windows' 260-character limit. The analysis itself, the tests and `nbconvert` still work without it.
+
+All random steps (bootstrap, train/test split, models) use a fixed seed, so re-running reproduces the numbers above.
 
 Note: `scikit-uplift` is used only in the tests, as an independent check of the uplift curve. Version 0.5.1 emits a deprecation warning with scikit-learn 1.9 and is expected to break with scikit-learn 1.10, which is why versions are pinned in `requirements.txt`.
 
