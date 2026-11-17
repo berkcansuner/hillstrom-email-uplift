@@ -9,7 +9,6 @@ RAW_CSV = (
     / "raw"
     / "Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv"
 )
-DB_PATH = REPO_ROOT / "data" / "processed" / "hillstrom.duckdb"
 SQL_DIR = REPO_ROOT / "sql"
 FIGURES_DIR = REPO_ROOT / "reports" / "figures"
 
