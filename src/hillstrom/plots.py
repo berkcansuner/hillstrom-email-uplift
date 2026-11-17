@@ -38,6 +38,8 @@ def apply_style() -> None:
             "legend.frameon": False,
             "legend.fontsize": 9,
             "lines.linewidth": 2,
+            # Labels contain dollar amounts ("$0 - $100"); do not treat "$" as math.
+            "text.parse_math": False,
         }
     )
 
