@@ -36,7 +36,7 @@
 | Uplift model | T-learner (one gradient-boosting model per arm, sklearn `HistGradientBoosting*`) | X-learner: helps mainly with unbalanced arms; ours are 1/3 each. Uplift trees / causal forests: harder to defend, need extra libraries |
 | Uplift evaluation | Qini curve + Qini coefficient on 30% held-out split (sklift) | In-sample evaluation: leaks |
 | Policy value | IPW estimate on held-out with known p = 1/3, bootstrap CI | Model-predicted value: optimistic, depends on the model being right |
-| Variance reduction | CUPED with `history`; then OLS regression adjustment with all pre-treatment covariates, HC1 SEs | Stratification: CUPED/regression are the industry standard and map to the thesis |
+| Variance reduction | CUPED with `history`; then OLS regression adjustment with all pre-treatment covariates, HC1 SEs | Stratification: CUPED/regression are the industry standard |
 | Power | Closed-form MDE / required n for two-sample means & proportions, α=0.05, power 0.8, cross-checked against statsmodels | Simulation-based power: unnecessary for these designs |
 
 ## File Structure
@@ -178,7 +178,7 @@ The raw CSV is gitignored and fetched by `scripts/download_data.py` (avoids redi
 - `regression_adjusted_effect(df, outcome: str, treat_arm: str, covariates: list[str]) -> EffectResult` (statsmodels OLS, HC1, centered covariates).
 
 - [ ] Tests: `test_cuped_theta_known` (y = 2x + noise → θ ≈ 2); `test_cuped_preserves_mean_diff` (adjusted diff ≈ raw diff on randomized data); `test_cuped_reduces_variance` (var ratio ≈ 1 − ρ²).
-- [ ] Notebook 04: variance reduction per metric, CI width before/after, implied sample-size saving (factor 1 − ρ²), honest statement if `history` correlates weakly with 2-week outcomes; 1-2 sentence link to thesis (covariate adjustment), no overclaiming.
+- [ ] Notebook 04: variance reduction per metric, CI width before/after, implied sample-size saving (factor 1 − ρ²), honest statement if `history` correlates weakly with 2-week outcomes.
 - [ ] Commits: each helper + tests; notebook sections.
 
 ### Task 9: Power analysis (spec step 5)
