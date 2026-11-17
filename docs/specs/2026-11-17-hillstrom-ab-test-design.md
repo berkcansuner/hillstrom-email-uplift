@@ -7,7 +7,6 @@
 Berk is applying to data scientist roles. Recent postings (Ruby Labs, FunnelFox) asked for A/B testing and hands-on SQL. His CV lists SQL but no work bullet shows it, and he has no A/B testing evidence. This project is public proof of both, at data-scientist depth: not only "did the email work?" but "who should get which email?".
 
 It should also connect to his story:
-- Covariate adjustment is his MSc thesis topic (ROC curve length under covariates).
 - Deciding whom to target is what he did with the PMT model at the Turkish Red Crescent.
 
 It will sit on the CV next to the CDISC project (which already shows R), as a Python + SQL project.
@@ -45,7 +44,7 @@ Kevin Hillstrom MineThatData E-Mail Analytics Challenge (2008).
 ## Approaches considered
 
 1. **Cookie Cats mobile game retention test (90k players).** Classic product test, but a single table and two metrics. Thin SQL and no room for modeling. Rejected: not enough depth for DS roles.
-2. **Hillstrom email test (chosen).** Three arms, skewed spend, meaningful pre-treatment covariates. Supports every analysis below and ties to Berk's thesis and PMT work.
+2. **Hillstrom email test (chosen).** Three arms, skewed spend, meaningful pre-treatment covariates. Supports every analysis below and ties to Berk's PMT work.
 3. **Criteo uplift dataset (13M rows).** Big-data SQL and uplift, but features are anonymized (f0, f1...), so no business story, and heavy for a laptop. Rejected.
 
 Berk picked approach 2.
@@ -62,7 +61,7 @@ Berk picked approach 2.
 1. **SQL prep (DuckDB).** Load raw CSV, type/clean columns, build per-arm and per-segment summary tables (counts, visit/conversion rates, spend stats). Saved queries are part of the deliverable.
 2. **Validity.** Sample ratio mismatch check (chi-square vs expected 1/3 split). Covariate balance across arms (standardized mean differences).
 3. **Main effects.** Each email vs No E-Mail, and Mens vs Womens, for visit, conversion, spend. Differences with confidence intervals. Multiple-comparison correction across the family of tests (state which method and why). Spend is zero-inflated and skewed: use bootstrap CIs, and report spend per customer and spend among converters separately.
-4. **Variance reduction.** CUPED / regression adjustment using pre-treatment `history` (and possibly other covariates). Report variance reduction and what it means for required sample size. Link to the thesis theme in one or two sentences, without overclaiming.
+4. **Variance reduction.** CUPED / regression adjustment using pre-treatment `history` (and possibly other covariates). Report variance reduction and what it means for required sample size.
 5. **Power analysis.** Minimum detectable effect at the actual sample size for each metric; required sample size for a few effect sizes; how CUPED changes it.
 6. **Who to target (uplift).** First, pre-specified segment effects (e.g. by `history_segment`, `channel`, `mens`/`womens` purchase history) with CIs. Then a model of individual uplift for each email vs no email (e.g. T-learner / X-learner or uplift tree). Evaluate with a Qini or uplift curve on held-out data.
 7. **Business decision.** A targeting policy: who gets Mens, who gets Womens, who gets nothing. Estimated incremental visits/conversions/spend vs (a) email everyone and (b) email no one, on held-out data, with uncertainty and clearly stated assumptions.
