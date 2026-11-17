@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from hillstrom.effects import bootstrap_diff_ci, diff_means_welch, diff_proportions
+from hillstrom.effects import bootstrap_diff_ci, diff_means_welch, diff_proportions, holm_adjust
 
 
 def test_diff_proportions_known():
@@ -81,3 +81,12 @@ def test_bootstrap_ci_covers_true_diff_and_matches_welch():
     width = welch.ci_high - welch.ci_low
     assert abs(low - welch.ci_low) < 0.1 * width
     assert abs(high - welch.ci_high) < 0.1 * width
+
+
+def test_holm_matches_manual():
+    # sorted: 0.01*3 = 0.03, 0.03*2 = 0.06, 0.04*1 = 0.04 -> monotone 0.06
+    assert np.allclose(holm_adjust([0.01, 0.04, 0.03]), [0.03, 0.06, 0.06])
+
+
+def test_holm_caps_at_one():
+    assert np.allclose(holm_adjust([0.5, 0.9]), [1.0, 1.0])

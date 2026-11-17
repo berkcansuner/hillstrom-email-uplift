@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from scipy import stats
+from statsmodels.stats.multitest import multipletests
 
 from hillstrom.paths import SEED
 
@@ -102,3 +103,11 @@ def bootstrap_diff_ci(
         rng=np.random.default_rng(seed),
     )
     return float(result.confidence_interval.low), float(result.confidence_interval.high)
+
+
+def holm_adjust(p_values) -> np.ndarray:
+    """Holm-adjusted p-values: controls the family-wise error rate across the family.
+
+    Compare each adjusted p-value with alpha (e.g. 0.05) to decide significance.
+    """
+    return multipletests(np.asarray(p_values, dtype=float), method="holm")[1]
