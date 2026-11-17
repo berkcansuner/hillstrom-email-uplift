@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from hillstrom.uplift import TLearner, make_features, split_train_test
+from hillstrom.uplift import TLearner, gain_over_random, make_features, split_train_test, uplift_curve
 
 
 def _customers(n: int = 3000, seed: int = 0) -> pd.DataFrame:
@@ -88,3 +88,38 @@ def test_tlearner_continuous_recovers_where_the_effect_is():
 def test_tlearner_rejects_unknown_outcome_type():
     with pytest.raises(ValueError):
         TLearner("count")
+
+
+# --- uplift curve ------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_uplift_curve_matches_sklift_on_binary_outcome():
+    from sklift.metrics import uplift_curve as sklift_uplift_curve
+
+    rng = np.random.default_rng(4)
+    n = 2000
+    y = rng.integers(0, 2, n)
+    treated = rng.integers(0, 2, n)
+    score = np.round(rng.normal(size=n), 1)  # rounding creates ties
+    ours = uplift_curve(y, score, treated)
+    theirs = sklift_uplift_curve(y, score, treated)
+    assert np.array_equal(ours[0], theirs[0])
+    assert np.allclose(ours[1], theirs[1])
+
+
+def test_uplift_curve_endpoint_is_total_effect_for_continuous_outcome():
+    rng = np.random.default_rng(5)
+    y = rng.exponential(10, 500)
+    treated = rng.integers(0, 2, 500).astype(bool)
+    n_targeted, gain = uplift_curve(y, rng.normal(size=500), treated)
+    assert n_targeted[-1] == 500
+    assert gain[-1] == pytest.approx((y[treated].mean() - y[~treated].mean()) * 500)
+
+
+def test_gain_over_random_sign_follows_ranking_quality():
+    X, treated, y_bin, _, x = _heterogeneous(n=20_000)
+    rng = np.random.default_rng(6)
+    assert gain_over_random(y_bin, x, treated) > 0.02
+    assert gain_over_random(y_bin, -x, treated) < -0.02
+    assert abs(gain_over_random(y_bin, rng.normal(size=len(x)), treated)) < 0.01

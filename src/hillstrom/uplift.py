@@ -83,3 +83,46 @@ class TLearner:
 
     def predict_uplift(self, X: pd.DataFrame) -> np.ndarray:
         return self._predict(self.model_t_, X) - self._predict(self.model_c_, X)
+
+
+def uplift_curve(y: np.ndarray, uplift: np.ndarray, treated: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Uplift curve: incremental outcome from targeting the top-k customers by predicted uplift.
+
+    For the k customers with the highest predicted uplift,
+        gain(k) = (mean outcome of treated among them - mean outcome of control among them) * k.
+    Ties in `uplift` are kept together (one point per distinct score). Works for binary
+    and continuous outcomes; on binary outcomes it equals `sklift.metrics.uplift_curve`
+    (checked in the tests). Returns (k values starting at 0, gains starting at 0).
+    """
+    y = np.asarray(y, dtype=float)
+    uplift = np.asarray(uplift, dtype=float)
+    treated = np.asarray(treated, dtype=float)
+
+    order = np.argsort(uplift, kind="mergesort")[::-1]
+    y, uplift, treated = y[order], uplift[order], treated[order]
+
+    last_of_each_score = np.r_[np.where(np.diff(uplift))[0], len(uplift) - 1]
+    n_all = last_of_each_score + 1
+    n_t = np.cumsum(treated)[last_of_each_score]
+    n_c = n_all - n_t
+    y_t = np.cumsum(y * treated)[last_of_each_score]
+    y_c = np.cumsum(y * (1 - treated))[last_of_each_score]
+
+    mean_t = np.divide(y_t, n_t, out=np.zeros_like(y_t), where=n_t != 0)
+    mean_c = np.divide(y_c, n_c, out=np.zeros_like(y_c), where=n_c != 0)
+    return np.r_[0, n_all], np.r_[0.0, (mean_t - mean_c) * n_all]
+
+
+def gain_over_random(y: np.ndarray, uplift: np.ndarray, treated: np.ndarray) -> float:
+    """Area between the uplift curve and random targeting, per customer.
+
+    Both axes are divided by the number of customers (x = share targeted, y = incremental
+    outcome per customer), so the result is in outcome units: the average extra outcome per
+    customer, across all targeting depths, from ranking by the model instead of at random.
+    Positive = better than random; 0 = no better than random.
+    """
+    n_targeted, gain = uplift_curve(y, uplift, treated)
+    n = n_targeted[-1]
+    share, gain_per_customer = n_targeted / n, gain / n
+    random_line = share * gain_per_customer[-1]
+    return float(np.trapezoid(gain_per_customer - random_line, share))
