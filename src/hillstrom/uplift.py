@@ -3,7 +3,10 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from hillstrom.paths import SEED
 
@@ -35,7 +38,17 @@ def make_features(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([df[NUMERIC_FEATURES].astype(float), *dummies], axis=1)
 
 
-def _base_model(outcome: str, seed: int):
+def _linear_model(outcome: str):
+    """Logistic regression (L2, default strength) for binary outcomes, OLS for continuous ones.
+
+    Features are standardized so the L2 penalty treats them equally.
+    """
+    if outcome == "binary":
+        return make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+    return make_pipeline(StandardScaler(), LinearRegression())
+
+
+def _gbm_model(outcome: str, seed: int):
     """Gradient boosting with conservative settings, the same for every arm.
 
     Shallow trees and large leaves limit how much noise each arm's model can fit;
@@ -61,19 +74,28 @@ class TLearner:
 
     outcome="binary" uses classifiers and predicted probabilities (e.g. visit);
     outcome="continuous" uses regressors (e.g. spend).
+    base="gbm" uses gradient boosting, base="linear" logistic/linear regression.
     """
 
-    def __init__(self, outcome: str, seed: int = SEED):
+    def __init__(self, outcome: str, base: str = "gbm", seed: int = SEED):
         if outcome not in ("binary", "continuous"):
             raise ValueError(f"outcome must be 'binary' or 'continuous', got {outcome!r}")
+        if base not in ("gbm", "linear"):
+            raise ValueError(f"base must be 'gbm' or 'linear', got {base!r}")
         self.outcome = outcome
+        self.base = base
         self.seed = seed
+
+    def _new_model(self):
+        if self.base == "linear":
+            return _linear_model(self.outcome)
+        return _gbm_model(self.outcome, self.seed)
 
     def fit(self, X: pd.DataFrame, y: np.ndarray, treated: np.ndarray) -> "TLearner":
         treated = np.asarray(treated, dtype=bool)
         y = np.asarray(y)
-        self.model_t_ = _base_model(self.outcome, self.seed).fit(X[treated], y[treated])
-        self.model_c_ = _base_model(self.outcome, self.seed).fit(X[~treated], y[~treated])
+        self.model_t_ = self._new_model().fit(X[treated], y[treated])
+        self.model_c_ = self._new_model().fit(X[~treated], y[~treated])
         return self
 
     def _predict(self, model, X: pd.DataFrame) -> np.ndarray:

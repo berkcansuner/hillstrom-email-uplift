@@ -149,3 +149,34 @@ def test_bootstrap_gain_interval_contains_point_estimate():
     draws = bootstrap_gain_over_random(y_bin, x, treated, n_boot=200, seed=0)
     low, high = np.percentile(draws, [2.5, 97.5])
     assert low < gain_over_random(y_bin, x, treated) < high
+
+
+# --- linear base models ------------------------------------------------------
+
+
+def test_tlearner_linear_binary_ranks_effect_region_higher():
+    X, treated, y_bin, _, x = _heterogeneous()
+    uplift = TLearner("binary", base="linear").fit(X, y_bin, treated).predict_uplift(X)
+    assert uplift[x > 0].mean() - uplift[x <= 0].mean() > 0.1
+
+
+def test_tlearner_linear_continuous_ranks_effect_region_higher():
+    X, treated, _, y_cont, x = _heterogeneous()
+    uplift = TLearner("continuous", base="linear").fit(X, y_cont, treated).predict_uplift(X)
+    assert uplift[x > 0].mean() - uplift[x <= 0].mean() > 1.5
+
+
+def test_tlearner_linear_constant_effect_gives_near_constant_uplift():
+    rng = np.random.default_rng(1)
+    n = 8000
+    X = pd.DataFrame({"x": rng.normal(size=n)})
+    treated = rng.integers(0, 2, n).astype(bool)
+    y = 2 + X["x"].to_numpy() + 1.0 * treated + rng.normal(0, 1, n)
+    uplift = TLearner("continuous", base="linear").fit(X, y, treated).predict_uplift(X)
+    assert uplift.mean() == pytest.approx(1.0, abs=0.1)
+    assert uplift.std() < 0.1
+
+
+def test_tlearner_rejects_unknown_base():
+    with pytest.raises(ValueError):
+        TLearner("binary", base="forest")
