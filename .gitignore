@@ -6,6 +6,7 @@ __pycache__/
 
 # Data: raw CSV is downloaded by scripts/download_data.py, never committed
 data/raw/*.csv
+data/raw/*.part
 data/processed/*
 !data/processed/.gitkeep
 
