@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from hillstrom.effects import diff_proportions
+from hillstrom.effects import diff_means_welch, diff_proportions
 
 
 def test_diff_proportions_known():
@@ -33,3 +33,21 @@ def test_diff_proportions_zero_events():
     assert result.estimate == 0.0
     assert np.isfinite([result.ci_low, result.ci_high, result.p_value]).all()
     assert result.p_value == 1.0
+
+
+def test_diff_means_welch_matches_manual_formula():
+    rng = np.random.default_rng(1)
+    y_t = rng.normal(1.0, 2.0, 300)
+    y_c = rng.normal(0.5, 1.0, 500)
+    result = diff_means_welch(y_t, y_c)
+
+    v_t, v_c = y_t.var(ddof=1) / 300, y_c.var(ddof=1) / 500
+    se = np.sqrt(v_t + v_c)
+    df = (v_t + v_c) ** 2 / (v_t**2 / 299 + v_c**2 / 499)
+    t_crit = stats.t.ppf(0.975, df)
+    estimate = y_t.mean() - y_c.mean()
+
+    assert result.estimate == pytest.approx(estimate)
+    assert result.ci_low == pytest.approx(estimate - t_crit * se)
+    assert result.ci_high == pytest.approx(estimate + t_crit * se)
+    assert result.p_value == pytest.approx(2 * stats.t.sf(abs(estimate) / se, df))
