@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from hillstrom.uplift import make_features, split_train_test
+from hillstrom.uplift import TLearner, make_features, split_train_test
 
 
 def _customers(n: int = 3000, seed: int = 0) -> pd.DataFrame:
@@ -57,3 +57,34 @@ def test_make_features_columns_fixed_even_if_a_level_is_missing():
     df = _customers()
     subset = df[(df["zip_code"] == "Urban") & (df["channel"] == "Web")]
     assert list(make_features(subset).columns) == list(make_features(df).columns)
+
+
+def _heterogeneous(n: int = 8000, seed: int = 0):
+    """Effect only for x > 0: +0.2 on a binary outcome, +3 on a continuous one."""
+    rng = np.random.default_rng(seed)
+    x = rng.uniform(-1, 1, n)
+    treated = rng.integers(0, 2, n).astype(bool)
+    effect_on = (x > 0) & treated
+    y_bin = rng.binomial(1, 0.2 + 0.2 * effect_on)
+    y_cont = 5 + 3 * effect_on + rng.normal(0, 1, n)
+    X = pd.DataFrame({"x": x, "noise": rng.normal(size=n)})
+    return X, treated, y_bin, y_cont, x
+
+
+def test_tlearner_binary_recovers_where_the_effect_is():
+    X, treated, y_bin, _, x = _heterogeneous()
+    uplift = TLearner("binary", seed=0).fit(X, y_bin, treated).predict_uplift(X)
+    assert uplift[x > 0].mean() == pytest.approx(0.2, abs=0.05)
+    assert uplift[x <= 0].mean() == pytest.approx(0.0, abs=0.05)
+
+
+def test_tlearner_continuous_recovers_where_the_effect_is():
+    X, treated, _, y_cont, x = _heterogeneous()
+    uplift = TLearner("continuous", seed=0).fit(X, y_cont, treated).predict_uplift(X)
+    assert uplift[x > 0].mean() == pytest.approx(3.0, abs=0.3)
+    assert uplift[x <= 0].mean() == pytest.approx(0.0, abs=0.3)
+
+
+def test_tlearner_rejects_unknown_outcome_type():
+    with pytest.raises(ValueError):
+        TLearner("count")
