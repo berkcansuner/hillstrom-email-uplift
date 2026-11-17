@@ -1,7 +1,8 @@
+import duckdb
 import pandas as pd
 import pytest
 
-from hillstrom.data import load_customers
+from hillstrom.data import load_customers, run_sql_file
 from hillstrom.paths import RAW_CSV
 
 EXPECTED_COLUMNS = [
@@ -48,3 +49,12 @@ def test_real_file_row_count_and_order():
     assert len(df) == 64_000
     assert df["arm"].notna().all()
     assert (df["history"].to_numpy() == raw["history"].to_numpy()).all()
+
+
+def test_run_sql_file_reads_utf8_regardless_of_locale(tmp_path, monkeypatch):
+    # U+2212 (minus sign) is not in Windows code pages such as cp1252/cp1254, so
+    # reading with the locale default would garble it.
+    (tmp_path / "unicode.sql").write_bytes("-- a − b\nSELECT '−' AS s;".encode("utf-8"))
+    monkeypatch.setattr("hillstrom.data.SQL_DIR", tmp_path)
+    con = duckdb.connect()
+    assert run_sql_file(con, "unicode.sql")["s"].iloc[0] == "−"

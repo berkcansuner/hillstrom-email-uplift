@@ -10,7 +10,7 @@ from hillstrom.paths import RAW_CSV, SQL_DIR
 
 def run_sql_file(con: duckdb.DuckDBPyConnection, name: str, **params) -> pd.DataFrame:
     """Run one statement from `sql/<name>` with named parameters ($param) and return the result."""
-    sql = (SQL_DIR / name).read_text()
+    sql = (SQL_DIR / name).read_text(encoding="utf-8")
     return con.execute(sql, params).df()
 
 
