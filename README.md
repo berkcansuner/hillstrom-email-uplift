@@ -24,7 +24,7 @@ Outcomes were tracked for the following two weeks: website `visit`, `conversion`
 |---|------|----------|--------|
 | 1 | SQL data prep (DuckDB) | `notebooks/01_sql_prep.ipynb` | done |
 | 2 | Validity checks: sample ratio mismatch, covariate balance | `notebooks/02_validity.ipynb` | done |
-| 3 | Main effects with confidence intervals and multiple-comparison correction | `notebooks/03_main_effects.ipynb` | planned |
+| 3 | Main effects with confidence intervals and multiple-comparison correction | `notebooks/03_main_effects.ipynb` | done |
 | 4 | Variance reduction (CUPED / regression adjustment) | `notebooks/04_cuped.ipynb` | planned |
 | 5 | Power analysis | `notebooks/05_power_analysis.ipynb` | planned |
 | 6 | Segment effects and uplift model | `notebooks/06_uplift.ipynb` | planned |
