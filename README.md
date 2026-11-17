@@ -27,7 +27,7 @@ Outcomes were tracked for the following two weeks: website `visit`, `conversion`
 | 3 | Main effects with confidence intervals and multiple-comparison correction | `notebooks/03_main_effects.ipynb` | done |
 | 4 | Variance reduction (CUPED / regression adjustment) | `notebooks/04_cuped.ipynb` | planned |
 | 5 | Power analysis | `notebooks/05_power_analysis.ipynb` | planned |
-| 6 | Segment effects and uplift model | `notebooks/06_uplift.ipynb` | planned |
+| 6 | Segment effects and uplift model | `notebooks/06_uplift.ipynb` | done |
 | 7 | Targeting policy and estimated business impact | `notebooks/07_targeting_policy.ipynb` | planned |
 
 Design document: [`docs/specs/2026-11-17-hillstrom-ab-test-design.md`](docs/specs/2026-11-17-hillstrom-ab-test-design.md)
